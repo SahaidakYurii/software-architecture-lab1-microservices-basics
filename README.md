@@ -15,7 +15,7 @@ The architecture consists of three microservices: facade-service - accepts POST/
    - Using bash script<br>
    `start-services.sh`<br>
    might need to `chmod +x start-services.sh`
-   - Starting one-be-one
+   - Starting one-by-one
    ```bash
    python3 facade-service.py 
    python3 logging-service.py 
@@ -37,7 +37,7 @@ The architecture consists of three microservices: facade-service - accepts POST/
 |----------|-------|-----------|----------|
 | Facade   | 5000  | /         | GET/POST |
 | Logging  | 5001  | /log      | GET/POST |
-| Messages | 5002  | /message  | GE T     |
+| Messages | 5002  | /message  | GET      |
 
 ## Request examples
 | Service   | Type | URL                            | Header                         | Body             | Response                    |
