@@ -34,18 +34,21 @@ The architecture consists of three microservices: facade-service - accepts POST/
 
 ## Structure
 | Service  | Port  | Endpoints | Requests |
-|----------|-------|-----------|----------|
-| Facade   | 5000  | /         | GET/POST |
-| Logging  | 5001  | /log      | GET/POST |
-| Messages | 5002  | /message  | GET      |
+|----------|-------|----------|----------|
+| Facade   | 5000  | /        | GET/POST |
+| Logging  | 5001  |          |          |
+| Messages | 5002  | /message | GET      |
 
 ## Request examples
-| Service   | Type | URL                            | Header                         | Body             | Response                    |
-|-----------|------|--------------------------------|--------------------------------|------------------|-----------------------------|
-| Facade    | POST | `http://localhost:5000/`         | `Content-Type: application/json` | `{"msg": "msg1"}`  | {"status":"Message logged"} |
-| Facade    | GET  | `http://localhost:5000/`         |                                |                  | msg1: not implemented yet   |
-| Logging   | GET  | `http://localhost:5001/log`      |                                |                  | msg1                        |
-| Messages  | GET  | `http://localhost:5002/message` |                                |                  | not implemented yet         |
+| Service   | Type | URL                             | Header                           | Body              | Response                    |
+|-----------|------|---------------------------------|----------------------------------|-------------------|-----------------------------|
+| Facade    | POST | `http://localhost:5000/`        | `Content-Type: application/json` | `{"msg": "msg1"}` | {"status":"Message logged"} |
+| Facade    | GET  | `http://localhost:5000/`        |                                  |                   | msg1: not implemented yet   |
+| Logging   | gRPC |                                 |                                  |                   |                             |
+| Messages  | GET  | `http://localhost:5002/message` |                                  |                   | not implemented yet         |
 
-
-
+## Protocol
+Commands
+![](./Screenshot%20from%202025-02-15%2023-20-57.png)
+Logs
+![](./Screenshot%20from%202025-02-15%2023-22-05.png)
