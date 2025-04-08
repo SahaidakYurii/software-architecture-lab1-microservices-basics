@@ -7,7 +7,7 @@ Every python script has -h option to get arguments. Run
 python3 ./python/<script>.py -h
 ``` 
 to get parameters. Every script
-except `logging-service.py` can run without arguments on default ports. Also `logging-service.py` will not show output 
+except `logging-service.py` and `messages-service.py` can run without arguments on default ports. Also `logging-service.py` will not show output 
 if hazelcast nodes are not running.
 
 ### Kafka:
@@ -46,6 +46,7 @@ To start all services and hazelcast nodes the following commands were run in dif
 | message_i | `python3 ./python/messages-service.py -p 501i`   |
 | logging_i | `python3 ./python/logging-service.py -i -p 502i` |
 | facade    | `python3 ./python/facade-service.py -p 5003`     |
+| kafka     | `docker-compose up -d`                           |
 The following structure was obtained
 
 | service         | port      | request | endpoint                 | description                                        |
@@ -67,7 +68,7 @@ Send 10 tasks to Kafka, when messaging services are down. Stop one kafka broker 
 Observe if any data was lost
 
 To avoid data loss, replications on kafka server were set up by the following command
-```CommandLine
+```bash
 sudo docker exec -it <any-broker-container-id> kafka-topics \
   --create \
   --bootstrap-server kafka1:29092 \
@@ -77,7 +78,7 @@ sudo docker exec -it <any-broker-container-id> kafka-topics \
 ```
 
 To check replications description the following one was used
-```CommandLine
+```bash
 sudo docker exec -it <any-broker-container-id> kafka-topics --describe \
   --bootstrap-server kafka1:29092 \
   --topic messages
