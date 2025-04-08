@@ -1,10 +1,4 @@
-# Lab1: Microservices Basics
-
-## Task:
-The architecture consists of three microservices: 
-- facade-service - accepts POST/GET requests from the client 
-- logging-service - stores on hazelcast nodes all the messages it receives and can return them 
-- messages-service - while acting as a stub, it returns a static message when addressed
+# Lab4: Kafka messages queue
 
 ## Usage:
 ### Python:
@@ -15,6 +9,22 @@ python3 ./python/<script>.py -h
 to get parameters. Every script
 except `logging-service.py` can run without arguments on default ports. Also `logging-service.py` will not show output 
 if hazelcast nodes are not running.
+
+### Kafka:
+Use the `docker-compose.yml` 
+```bash
+sudo systemctl enable docker
+sudo systemctl start docker
+```
+
+```bash
+sudo docker-compose up -d
+```
+
+To stop
+```CommandLine
+sudo docker-compose down
+```
 
 ### Bash:
 The `control.sh` script can be used to run all services and hazelcast with one command. But logs will be at the same 
@@ -29,63 +39,64 @@ To get proper arguments
 ## Deployment
 To start all services and hazelcast nodes the following commands were run in different terminals
 
-| terminal  | command                                                               |
-|-----------|-----------------------------------------------------------------------|
-| hazelcast | `./control -hs`                                                       |
-| config    | `python3 ./python/config-server.py -p 5000 -m 5001 -l 5002 5003 5004` |
-| message   | `python3 ./python/messages-service.py -p 5001`                        |
-| logging1  | `python3 ./python/logging-service.py -i -p 5002`                      |
-| logging2  | `python3 ./python/logging-service.py -i -p 5003`                      |
-| logging3  | `python3 ./python/logging-service.py -i -p 5004`                      |
-| facade    | `python3 ./python/facade-service.py -p 5005`                          |
+| terminal  | command                                          |
+|-----------|--------------------------------------------------|
+| hazelcast | `./control -hs`                                  |
+| config    | `python3 ./python/config-server.py -p 5000`      |
+| message_i | `python3 ./python/messages-service.py -p 501i`   |
+| logging_i | `python3 ./python/logging-service.py -i -p 502i` |
+| facade    | `python3 ./python/facade-service.py -p 5003`     |
 The following structure was obtained
 
 | service         | port      | request | endpoint                 | description                                        |
 |-----------------|-----------|---------|--------------------------|----------------------------------------------------|
 | hazelcast_nodes | 5701-5703 |         |                          |                                                    |
+| kafka_brokers   | 9092-9094 |         |                          |                                                    |
 | config          | 5000      | GET     | /services/<service_name> | returns list of ports of <service_name>            |
-| message         | 5001      | GET     | /message                 | returns static message                             |
-| logging         | 5002-5004 | POST    | /log                     | logs message                                       |
+| message         | 5011-5012 | GET     | /message                 | returns static message                             |
+| logging         | 5021-5023 | POST    | /log                     | logs message                                       |
 |                 |           | GET     | /log                     | returns message logs                               |
-| facade          | 5005      | GET     | /                        | returns messages and message from messages-service |      
+| facade          | 5003      | GET     | /                        | returns messages and message from messages-service |      
 |                 |           | POST    | /                        | creates message                                    |       
 
+
+
+
 ## Task
-To push 10 messages, the following command was used
+Send 10 tasks to Kafka, when messaging services are down. Stop one kafka broker and than start messages services. 
+Observe if any data was lost
+
+To avoid data loss, replications on kafka server were set up by the following command
+```CommandLine
+sudo docker exec -it <any-broker-container-id> kafka-topics \
+  --create \
+  --bootstrap-server kafka1:29092 \
+  --replication-factor 2 \
+  --partitions 1 \
+  --topic messages
+```
+
+To check replications description the following one was used
+```CommandLine
+sudo docker exec -it <any-broker-container-id> kafka-topics --describe \
+  --bootstrap-server kafka1:29092 \
+  --topic messages
+```
+
+After this 10 messages were sent from another terminal
 ```bash
-for i in {1..10}; do curl -X POST http://localhost:5005/ -H "Content-Type: application/json" -d "{\"msg\": \"msg$i\"}"; done
+for i in {1..10}; do curl -X POST http://localhost:5003/ -H "Content-Type: application/json" -d "{\"msg\": \"msg$i\"}"; done
 ```
-![](./imgs/POST_requests.png)
-The following distribution of requests was obtained
 
-| logging1                 | logging2                 | logging3                 |
-|--------------------------|--------------------------|--------------------------|
-| ![](./imgs/logging1.png) | ![](./imgs/logging2.png) | ![](./imgs/logging3.png) |
-| 1, 2, 3, 6, 7, 8, 10     | 5, 9                     | 4                        |
-
-To read the results the following request was sent
-```bash
-curl -X GET http://localhost:5005/
+From the description a leader of the group was identified and stopped
+```commandline
+docker stop <leader-id>
 ```
-The following result of shuffled but complete list of messages was obtained
-![](./imgs/GET_request.png)
 
-After disabling 2 logging-services (PIDs 10699, 10724) and hazelcast nodes (PIDs 9912, 9914) some data was lost due to 
-the same principles as in [lab2](https://github.com/SahaidakYurii/software-architecture-lab2-hazelcast). 
-![](./imgs/GET_lost_data.png)
-To avoid such 
-behavior more replications can be setup in `config.xml`. For example 2.
-```xml
-<map name="default">
-    <backup-count>2</backup-count>
-</map>
-```
-The errors shown in cmd are because the logging-service which is called after GET request is chosen by random so it 
-took a few requests to choose working one.
+When the messaging services were started, all messages reached each of them
 
-If killing logging-services and nodes one by one, no data loss is observed.
-![](./imgs/GET_consecutive_kill.png)
+![](./imgs/messages.png)
+![](./imgs/result.png)
 
 ## Additional task
-The config-server.py was created. It takes ports of all services in arguments and returns them when proper requests are 
-sent. The requests schema is above
+Used Kafka
