@@ -93,6 +93,7 @@ From the description a leader of the group was identified and stopped
 ```commandline
 docker stop <leader-id>
 ```
+To start messaging services simultaneously, `messaging_start.sh` was used.
 
 When the messaging services were started, all messages reached each of them
 
