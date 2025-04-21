@@ -1,7 +1,7 @@
 services:
   # Consul service for service discovery and configuration
   consul:
-    image: consul:latest
+    image: consul:1.15.4
     container_name: consul
     ports:
       - "8500:8500"  # Web UI for Consul
