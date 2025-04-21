@@ -15,7 +15,7 @@ services:
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092,PLAINTEXT_INTERNAL://kafka1:29092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka1:9092,PLAINTEXT_INTERNAL://kafka1:29092
       KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,PLAINTEXT_INTERNAL://0.0.0.0:29092
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT_INTERNAL
@@ -30,7 +30,7 @@ services:
     environment:
       KAFKA_BROKER_ID: 2
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9093,PLAINTEXT_INTERNAL://kafka2:29093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka2:9093,PLAINTEXT_INTERNAL://kafka2:29093
       KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9093,PLAINTEXT_INTERNAL://0.0.0.0:29093
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT_INTERNAL
@@ -45,7 +45,7 @@ services:
     environment:
       KAFKA_BROKER_ID: 3
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9094,PLAINTEXT_INTERNAL://kafka3:29094
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka3:9094,PLAINTEXT_INTERNAL://kafka3:29094
       KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9094,PLAINTEXT_INTERNAL://0.0.0.0:29094
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT_INTERNAL
@@ -58,3 +58,79 @@ services:
     environment:
       - KAFKA_CLUSTERS_0_NAME=local
       - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=kafka1:29092,kafka2:29093,kafka3:29094
+
+  config:
+    build:
+      context: ./python
+    command: python3 config-server.py -p 5000
+    environment:
+      - MESSAGES_HOSTS=messages1:5011,messages2:5012
+      - LOGGING_HOSTS=logging1:5021,logging2:5022,logging3:5023
+    ports:
+      - "5000:5000"
+
+  messages1:
+    build:
+      context: ./python
+    command: python3 messages-service.py -p 5011
+    environment:
+      - KAFKA_BOOTSTRAP_SERVERS=kafka1:29092,kafka2:29093,kafka3:29094
+    ports:
+      - "5011:5011"
+    depends_on:
+      - config
+
+  messages2:
+    build:
+      context: ./python
+    command: python3 messages-service.py -p 5012
+    environment:
+      - KAFKA_BOOTSTRAP_SERVERS=kafka1:29092,kafka2:29093,kafka3:29094
+    ports:
+      - "5012:5012"
+    depends_on:
+      - config
+
+  logging1:
+    build:
+      context: ./python
+    command: python3 logging-service.py -p 5021
+    ports:
+      - "5021:5021"
+    depends_on:
+      - config
+
+  logging2:
+    build:
+      context: ./python
+    command: python3 logging-service.py -p 5022
+    ports:
+      - "5022:5022"
+    depends_on:
+      - config
+
+  logging3:
+    build:
+      context: ./python
+    command: python3 logging-service.py -p 5023
+    ports:
+      - "5023:5023"
+    depends_on:
+      - config
+
+  facade:
+    build:
+      context: ./python
+    command: python3 facade-service.py -p 5003
+    environment:
+      - KAFKA_BOOTSTRAP_SERVERS=kafka1:29092,kafka2:29093,kafka3:29094
+      - CONFIG_HOST=config:5000
+    ports:
+      - "5003:5003"
+    depends_on:
+      - config
+      - messages1
+      - messages2
+      - logging1
+      - logging2
+      - logging3

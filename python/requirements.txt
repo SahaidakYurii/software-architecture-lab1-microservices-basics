@@ -1,0 +1,6 @@
+confluent-kafka==2.9.0
+Flask==3.1.0
+hazelcast-python-client==5.5.0
+requests==2.32.3
+urllib3==2.3.0
+uuid==1.30

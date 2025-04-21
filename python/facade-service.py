@@ -1,4 +1,5 @@
 import argparse
+import os
 import random
 from flask import Flask, request, jsonify
 import requests
@@ -10,24 +11,13 @@ app = Flask(__name__)
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Facade Service")
     parser.add_argument("-p", "--port", type=int, default=5005, help="Port to run the facade-service on")
-    parser.add_argument("-c", "--config_port", type=int, default=5000, help="Port where config-server instance is running")
-    parser.add_argument("-m", "--messages_port",
-        type=int,
-        nargs="+",
-        default=[5011, 5012, 5013],
-        help="List of ports where messages-service instances are running")
-    parser.add_argument(
-        "-l", "--logging_ports",
-        type=int,
-        nargs="+",
-        default=[5021, 5022, 5023],  # Default ports
-        help="List of ports where logging-service instances are running"
-    )
     return parser.parse_args()
 
+CONFIG_HOST = os.environ.get("CONFIG_HOST", "localhost:5000")
+
 args = parse_arguments()
-CONFIG_SERVER_URL = "http://localhost:" + str(args.config_port)
-KAFKA_BOOTSTRAP_SERVERS = "localhost:9092,localhost:9093,localhost:9094"
+CONFIG_SERVER_URL = f"http://{CONFIG_HOST}"
+KAFKA_BOOTSTRAP_SERVERS = os.environ.get("KAFKA_BOOTSTRAP_SERVERS", "kafka1:29092,kafka2:29093,kafka3:29094")
 KAFKA_TOPIC = "messages"
 
 producer_conf = {'bootstrap.servers': KAFKA_BOOTSTRAP_SERVERS}

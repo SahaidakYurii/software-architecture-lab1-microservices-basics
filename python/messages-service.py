@@ -14,7 +14,8 @@ def parse_arguments():
     parser.add_argument("-i", "--pid", action="store_true", help="Whether to print PID when started")
     return parser.parse_args()
 
-KAFKA_BOOTSTRAP_SERVERS = "localhost:9092,localhost:9093,localhost:9094"
+
+KAFKA_BOOTSTRAP_SERVERS = os.environ.get("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092,localhost:9093,localhost:9094")
 KAFKA_TOPIC = "messages"
 
 def kafka_consumer_loop():
@@ -47,7 +48,7 @@ if __name__ == "__main__":
     args = parse_arguments()
     threading.Thread(target=kafka_consumer_loop, daemon=True).start()
 
-    if (args.pid) :
+    if args.pid:
         print(f"running with PID: {os.getpid()}")
 
     app.run(port=args.port)

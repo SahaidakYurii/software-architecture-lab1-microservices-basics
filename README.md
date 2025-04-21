@@ -39,14 +39,14 @@ To get proper arguments
 ## Deployment
 To start all services and hazelcast nodes the following commands were run in different terminals
 
-| terminal  | command                                          |
-|-----------|--------------------------------------------------|
-| hazelcast | `./control -hs`                                  |
-| config    | `python3 ./python/config-server.py -p 5000`      |
-| message_i | `python3 ./python/messages-service.py -p 501i`   |
-| logging_i | `python3 ./python/logging-service.py -i -p 502i` |
-| facade    | `python3 ./python/facade-service.py -p 5003`     |
-| kafka     | `docker-compose up -d`                           |
+| terminal  | command                                                 |
+|-----------|---------------------------------------------------------|
+| hazelcast | `start_node 5703 && start_node 5702 && start_node 5701` |
+| config    | `python3 ./python/config-server.py -p 5000`             |
+| message_i | `python3 ./python/messages-service.py -p 501i`          |
+| logging_i | `python3 ./python/logging-service.py -p 502i`           |
+| facade    | `python3 ./python/facade-service.py -p 5003`            |
+| kafka     | `docker-compose up -d`                                  |
 The following structure was obtained
 
 | service         | port      | request | endpoint                 | description                                        |

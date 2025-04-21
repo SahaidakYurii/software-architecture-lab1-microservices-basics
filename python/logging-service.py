@@ -28,7 +28,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    if (args.pid) :
+    if args.pid:
         print(f"running with PID: {os.getpid()}")
 
     app.run(port=args.port)
