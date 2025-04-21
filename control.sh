@@ -3,6 +3,12 @@ start_node() {
   hz start -c config.xml -p $port &
   local pid=$!
   echo "Started node on port $port with PID: $pid"
+
+  # Register Hazelcast node information in Consul (use key-value store)
+  local node_name="hazelcast-node-$port"
+  local node_address=$(hostname -I | awk '{print $1}')  # Assuming the first IP is the desired one
+  consul kv put "hazelcast/$node_name/address" "$node_address"
+  consul kv put "hazelcast/$node_name/port" "$port"
 }
 
 start_services() {

@@ -3,28 +3,24 @@ from flask import Flask, jsonify
 from confluent_kafka import Consumer
 import threading
 import os
-from consul import Consul
-import socket
+from consul_funcs import register_service, discover_kafka_brokers
 
 app = Flask(__name__)
 messages = []
 
-def register_service(service_name, port):
-    consul = Consul()
-    service_id = f"{service_name}-{socket.gethostname()}-{port}"
-    consul.agent.service.register(service_name,
-                                  service_id=service_id,
-                                  port=port,
-                                  tags=["microservice"])
-
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Kafka-based Messages Service")
-    parser.add_argument("-p", "--port", type=int, help="Port to run the messages service on")
+    parser.add_argument("-p", "--port", type=int, help="Port to run the service on")
+    parser.add_argument("-H", "--host", type=str, default="localhost", help="Address to run the service on")
     parser.add_argument("-g", "--group", type=str, default="msg-group", help="Kafka consumer group ID")
     parser.add_argument("-i", "--pid", action="store_true", help="Whether to print PID when started")
     return parser.parse_args()
 
-KAFKA_BOOTSTRAP_SERVERS = "localhost:9092,localhost:9093,localhost:9094"
+kafka_brokers = discover_kafka_brokers()
+if not kafka_brokers:
+    raise RuntimeError("No Kafka brokers available via Consul")
+
+KAFKA_BOOTSTRAP_SERVERS = ",".join(kafka_brokers)
 KAFKA_TOPIC = "messages"
 
 def kafka_consumer_loop():

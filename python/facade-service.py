@@ -4,45 +4,23 @@ from flask import Flask, request, jsonify
 import requests
 import uuid
 from confluent_kafka import Producer
-from consul import Consul
-import socket
+from consul_funcs import register_service, discover_service, discover_kafka_brokers
 
 app = Flask(__name__)
 
-def register_service(service_name, port):
-    consul = Consul()
-    service_id = f"{service_name}-{socket.gethostname()}-{port}"
-    consul.agent.service.register(service_name,
-                                  service_id=service_id,
-                                  port=port,
-                                  tags=["microservice"])
-
-
-def discover_service(service_name):
-    consul = Consul()
-    index, nodes = consul.catalog.service(service_name)
-    return [f"http://{node['ServiceAddress']}:{node['ServicePort']}" for node in nodes]
-
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Facade Service")
-    parser.add_argument("-p", "--port", type=int, default=5005, help="Port to run the facade-service on")
-    parser.add_argument("-c", "--config_port", type=int, default=5000, help="Port where config-server instance is running")
-    parser.add_argument("-m", "--messages_port",
-        type=int,
-        nargs="+",
-        default=[5011, 5012, 5013],
-        help="List of ports where messages-service instances are running")
-    parser.add_argument(
-        "-l", "--logging_ports",
-        type=int,
-        nargs="+",
-        default=[5021, 5022, 5023],  # Default ports
-        help="List of ports where logging-service instances are running"
-    )
+    parser.add_argument("-p", "--port", type=int, default=5005, help="Port to run the service on")
+    parser.add_argument("-H", "--host", type=str, default="localhost", help="Address to run the service on")
     return parser.parse_args()
 
 args = parse_arguments()
-KAFKA_BOOTSTRAP_SERVERS = "localhost:9092,localhost:9093,localhost:9094"
+
+kafka_brokers = discover_kafka_brokers()
+if not kafka_brokers:
+    raise RuntimeError("No Kafka brokers available via Consul")
+
+KAFKA_BOOTSTRAP_SERVERS = ",".join(kafka_brokers)
 KAFKA_TOPIC = "messages"
 
 producer_conf = {'bootstrap.servers': KAFKA_BOOTSTRAP_SERVERS}
