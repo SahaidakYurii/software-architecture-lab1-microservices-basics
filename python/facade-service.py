@@ -4,8 +4,24 @@ from flask import Flask, request, jsonify
 import requests
 import uuid
 from confluent_kafka import Producer
+from consul import Consul
+import socket
 
 app = Flask(__name__)
+
+def register_service(service_name, port):
+    consul = Consul()
+    service_id = f"{service_name}-{socket.gethostname()}-{port}"
+    consul.agent.service.register(service_name,
+                                  service_id=service_id,
+                                  port=port,
+                                  tags=["microservice"])
+
+
+def discover_service(service_name):
+    consul = Consul()
+    index, nodes = consul.catalog.service(service_name)
+    return [f"http://{node['ServiceAddress']}:{node['ServicePort']}" for node in nodes]
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Facade Service")
@@ -26,16 +42,11 @@ def parse_arguments():
     return parser.parse_args()
 
 args = parse_arguments()
-CONFIG_SERVER_URL = "http://localhost:" + str(args.config_port)
 KAFKA_BOOTSTRAP_SERVERS = "localhost:9092,localhost:9093,localhost:9094"
 KAFKA_TOPIC = "messages"
 
 producer_conf = {'bootstrap.servers': KAFKA_BOOTSTRAP_SERVERS}
 producer = Producer(producer_conf)
-
-def get_service_instances(service_name):
-    response = requests.get(f"{CONFIG_SERVER_URL}/services/{service_name}")
-    return response.json() if response.status_code == 200 else []
 
 @app.route("/", methods=["POST"])
 def handle_post():
@@ -47,7 +58,7 @@ def handle_post():
     message_id = str(uuid.uuid4())
     log_data = {"id": message_id, "msg": msg}
 
-    logging_services = get_service_instances("logging-service")
+    logging_services = discover_service("logging-service")
     if not logging_services:
         return jsonify({"error": "No logging services available"}), 503
 
@@ -67,8 +78,8 @@ def handle_post():
 
 @app.route("/", methods=["GET"])
 def handle_get():
-    logging_services = get_service_instances("logging-service")
-    message_services = get_service_instances("messages-service")
+    logging_services = discover_service("logging-service")
+    message_services = discover_service("messages-service")
 
     if not logging_services:
         return jsonify({"error": "No logging services available"}), 503
@@ -88,4 +99,5 @@ def handle_get():
     return log_response + ": " + msg_response
 
 if __name__ == "__main__":
+    register_service('facade-service', args.port)
     app.run(port=args.port)

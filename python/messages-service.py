@@ -3,9 +3,19 @@ from flask import Flask, jsonify
 from confluent_kafka import Consumer
 import threading
 import os
+from consul import Consul
+import socket
 
 app = Flask(__name__)
 messages = []
+
+def register_service(service_name, port):
+    consul = Consul()
+    service_id = f"{service_name}-{socket.gethostname()}-{port}"
+    consul.agent.service.register(service_name,
+                                  service_id=service_id,
+                                  port=port,
+                                  tags=["microservice"])
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Kafka-based Messages Service")
@@ -49,5 +59,7 @@ if __name__ == "__main__":
 
     if (args.pid) :
         print(f"running with PID: {os.getpid()}")
+
+    register_service("messages-service", args.port)
 
     app.run(port=args.port)

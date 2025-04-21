@@ -2,12 +2,22 @@ from flask import Flask, request, jsonify
 import argparse
 import hazelcast
 import os
+from consul import Consul
+import socket
 
 app = Flask(__name__)
 logs = {}
 
 hz_client = hazelcast.HazelcastClient()
 log_map = hz_client.get_map("logs").blocking()
+
+def register_service(service_name, port):
+    consul = Consul()
+    service_id = f"{service_name}-{socket.gethostname()}-{port}"
+    consul.agent.service.register(service_name,
+                                  service_id=service_id,
+                                  port=port,
+                                  tags=["microservice"])
 
 @app.route("/log", methods=["POST"])
 def log_message():
@@ -30,5 +40,7 @@ if __name__ == "__main__":
 
     if (args.pid) :
         print(f"running with PID: {os.getpid()}")
+
+    register_service("logging-service", args.port)
 
     app.run(port=args.port)

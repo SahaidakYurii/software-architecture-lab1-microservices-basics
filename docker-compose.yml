@@ -1,15 +1,32 @@
-version: '3'
 services:
+  # Consul service for service discovery and configuration
+  consul:
+    image: consul:latest
+    container_name: consul
+    ports:
+      - "8500:8500"  # Web UI for Consul
+      - "8600:8600/udp"  # DNS
+    environment:
+      - 'CONSUL_LOCAL_CONFIG={"skip_leave_on_interrupt": true}'
+    command: "consul agent -dev -client=0.0.0.0"
+    networks:
+      - kafka-net
+
+  # Zookeeper service used by Kafka
   zookeeper:
     image: confluentinc/cp-zookeeper:7.0.1
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
+    networks:
+      - kafka-net
 
+  # Kafka broker 1
   kafka1:
     image: confluentinc/cp-kafka:7.0.1
     depends_on:
       - zookeeper
+      - consul
     ports:
       - "9092:9092"
     environment:
@@ -20,11 +37,31 @@ services:
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT_INTERNAL
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 2
+      KAFKA_LISTENER_NAME_INTERNAL: PLAINTEXT_INTERNAL
+    networks:
+      - kafka-net
+    command:
+      - "bash"
+      - "-c"
+      - |
+        # Start Kafka
+        /etc/confluent/docker/run &
 
+        # Register Kafka with Consul
+        sleep 10
+        curl --request PUT \
+          --data '{"ID": "kafka1", "Name": "kafka", "Tags": ["broker"], "Address": "kafka1", "Port": 9092}' \
+          http://consul:8500/v1/agent/service/register
+
+        # Keep the container running
+        tail -f /dev/null
+
+  # Kafka broker 2
   kafka2:
     image: confluentinc/cp-kafka:7.0.1
     depends_on:
       - zookeeper
+      - consul
     ports:
       - "9093:9093"
     environment:
@@ -35,11 +72,31 @@ services:
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT_INTERNAL
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 2
+      KAFKA_LISTENER_NAME_INTERNAL: PLAINTEXT_INTERNAL
+    networks:
+      - kafka-net
+    command:
+      - "bash"
+      - "-c"
+      - |
+        # Start Kafka
+        /etc/confluent/docker/run &
 
+        # Register Kafka with Consul
+        sleep 10
+        curl --request PUT \
+          --data '{"ID": "kafka2", "Name": "kafka", "Tags": ["broker"], "Address": "kafka2", "Port": 9093}' \
+          http://consul:8500/v1/agent/service/register
+
+        # Keep the container running
+        tail -f /dev/null
+
+  # Kafka broker 3
   kafka3:
     image: confluentinc/cp-kafka:7.0.1
     depends_on:
       - zookeeper
+      - consul
     ports:
       - "9094:9094"
     environment:
@@ -50,7 +107,26 @@ services:
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT_INTERNAL
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 2
+      KAFKA_LISTENER_NAME_INTERNAL: PLAINTEXT_INTERNAL
+    networks:
+      - kafka-net
+    command:
+      - "bash"
+      - "-c"
+      - |
+        # Start Kafka
+        /etc/confluent/docker/run &
 
+        # Register Kafka with Consul
+        sleep 10
+        curl --request PUT \
+          --data '{"ID": "kafka3", "Name": "kafka", "Tags": ["broker"], "Address": "kafka3", "Port": 9094}' \
+          http://consul:8500/v1/agent/service/register
+
+        # Keep the container running
+        tail -f /dev/null
+
+  # Kafka UI to manage and monitor Kafka topics and brokers
   kafka-ui:
     image: provectuslabs/kafka-ui
     ports:
@@ -58,3 +134,9 @@ services:
     environment:
       - KAFKA_CLUSTERS_0_NAME=local
       - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=kafka1:29092,kafka2:29093,kafka3:29094
+    networks:
+      - kafka-net
+
+networks:
+  kafka-net:
+    driver: bridge
