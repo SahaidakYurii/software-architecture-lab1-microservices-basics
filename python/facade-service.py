@@ -10,7 +10,7 @@ app = Flask(__name__)
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Facade Service")
-    parser.add_argument("-p", "--port", type=int, default=5005, help="Port to run the service on")
+    parser.add_argument("-p", "--port", type=int, default=5000, help="Port to run the service on")
     parser.add_argument("-H", "--host", type=str, default="localhost", help="Address to run the service on")
     return parser.parse_args()
 

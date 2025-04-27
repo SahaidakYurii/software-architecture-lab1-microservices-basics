@@ -46,13 +46,22 @@ services:
       - |
         # Start Kafka
         /etc/confluent/docker/run &
-
+        
+        # Wait for Kafka to fully start
+        sleep 20
+        
+        # Create the topic 'messages' manually
+        kafka-topics --create \
+          --bootstrap-server localhost:9092 \
+          --replication-factor 2 \
+          --partitions 3 \
+          --topic messages || echo "Topic 'messages' already exists."
+        
         # Register Kafka with Consul
-        sleep 10
         curl --request PUT \
-          --data '{"ID": "kafka1", "Name": "kafka", "Tags": ["broker"], "Address": "kafka1", "Port": 9092}' \
+          --data '{"ID": "kafka1", "Name": "kafka", "Tags": ["broker"], "Address": "localhost", "Port": 9092}' \
           http://consul:8500/v1/agent/service/register
-
+        
         # Keep the container running
         tail -f /dev/null
 
@@ -85,7 +94,7 @@ services:
         # Register Kafka with Consul
         sleep 10
         curl --request PUT \
-          --data '{"ID": "kafka2", "Name": "kafka", "Tags": ["broker"], "Address": "kafka2", "Port": 9093}' \
+          --data '{"ID": "kafka2", "Name": "kafka", "Tags": ["broker"], "Address": "localhost", "Port": 9093}' \
           http://consul:8500/v1/agent/service/register
 
         # Keep the container running
@@ -120,7 +129,7 @@ services:
         # Register Kafka with Consul
         sleep 10
         curl --request PUT \
-          --data '{"ID": "kafka3", "Name": "kafka", "Tags": ["broker"], "Address": "kafka3", "Port": 9094}' \
+          --data '{"ID": "kafka3", "Name": "kafka", "Tags": ["broker"], "Address": "localhost", "Port": 9094}' \
           http://consul:8500/v1/agent/service/register
 
         # Keep the container running

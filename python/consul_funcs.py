@@ -20,18 +20,27 @@ def discover_kafka_brokers():
     index, nodes = consul.catalog.service("kafka")
     brokers = [f"{node['ServiceAddress']}:{node['ServicePort']}" for node in nodes]
     return brokers
-
 def get_hazelcast_nodes():
     consul = Consul()
-    index, nodes = consul.kv.get('hazelcast')
+    index, nodes = consul.kv.get('hazelcast/', recurse=True)
     if nodes is None:
         raise Exception("No Hazelcast nodes found in Consul")
 
-    # Assuming all nodes under 'hazelcast' are Hazelcast nodes with address and port information
     hz_nodes = []
-    for key, value in nodes.items():
+    address_map = {}
+
+    for node in nodes:
+        key = node['Key']
+        value = node['Value']
         if 'address' in key:
-            address = value['Value'].decode('utf-8')
-            port = consul.kv.get(key.replace('address', 'port'))[1]['Value'].decode('utf-8')
-            hz_nodes.append(f"{address}:{port}")
+            node_name = key.split('/')[-2]  # e.g., hazelcast-node-5701
+            address_map[node_name] = {'address': value.decode('utf-8')}
+        elif 'port' in key:
+            node_name = key.split('/')[-2]
+            address_map.setdefault(node_name, {})['port'] = value.decode('utf-8')
+
+    for node_name, info in address_map.items():
+        if 'address' in info and 'port' in info:
+            hz_nodes.append(f"{info['address']}:{info['port']}")
+
     return hz_nodes
